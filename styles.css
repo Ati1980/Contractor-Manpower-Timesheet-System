@@ -1,0 +1,139 @@
+/* Custom styling for Contractor Manpower & Working Hours System */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary: #1e40af;
+  --primary-hover: #1d4ed8;
+  --secondary: #0f766e;
+  --accent: #f59e0b;
+}
+
+body {
+  font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+}
+
+h1, h2, h3, h4, .font-prompt {
+  font-family: 'Prompt', 'Sarabun', sans-serif;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Sticky columns for the big timesheet table */
+.sticky-col-1 {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  background-color: inherit;
+}
+.sticky-col-2 {
+  position: sticky;
+  left: 56px;
+  z-index: 20;
+  background-color: inherit;
+}
+.sticky-col-3 {
+  position: sticky;
+  left: 140px;
+  z-index: 20;
+  background-color: inherit;
+}
+
+/* Cell hour inputs */
+.hour-cell {
+  width: 44px;
+  height: 34px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+}
+.hour-cell:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+  z-index: 10;
+  position: relative;
+}
+
+/* Weekend highlighting */
+.weekend-col {
+  background-color: #fffbeb !important;
+}
+.weekend-header {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+/* Value colors */
+.hour-val-12 {
+  color: #1d4ed8;
+  background-color: #eff6ff;
+}
+.hour-val-8 {
+  color: #047857;
+  background-color: #ecfdf5;
+}
+.hour-val-0 {
+  color: #94a3b8;
+  background-color: #f8fafc;
+}
+.hour-val-ot {
+  color: #b45309;
+  background-color: #fffbeb;
+}
+
+/* Toast notification */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+/* Print styling */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .table-container {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  .shadow-sm, .shadow-md, .shadow-lg {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+}
+.print-only {
+  display: none;
+}

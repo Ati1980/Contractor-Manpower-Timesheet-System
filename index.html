@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบบันทึกชั่วโมงการทำงานผู้รับเหมา (Contractor Manpower Timesheet)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Sarabun & Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sarabun', 'sans-serif'],
+            prompt: ['Prompt', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-[98%] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600/60 border border-blue-400/40 flex items-center justify-center shadow-inner">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg md:text-xl font-bold font-prompt tracking-tight text-white flex items-center gap-2">
+            ระบบบันทึกชั่วโมงการทำงานผู้รับเหมา
+            <span class="text-[11px] font-normal px-2 py-0.5 rounded-full bg-blue-500/40 text-blue-100 border border-blue-400/30">Mitr Phol Standard</span>
+          </h1>
+          <p class="text-xs text-blue-200" id="selected-company-display">บริษัท รักษาความปลอดภัย ที.เจ.เซอร์วิส กรุ๊ป จำกัด</p>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="flex items-center gap-2 no-print">
+        <button type="button" onclick="window.exportTimesheetCSV()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-sm transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          ส่งออก CSV (Excel)
+        </button>
+        <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-700 hover:bg-blue-600 text-white rounded-lg shadow-sm transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+          พิมพ์รายงาน
+        </button>
+        <button type="button" onclick="window.resetSampleData()" title="รีเซ็ตเป็นข้อมูลตัวอย่าง" class="p-1.5 text-blue-200 hover:text-white hover:bg-blue-800 rounded-lg transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filter & Control Toolbar -->
+  <section class="bg-white border-b border-slate-200 py-3 px-4 shadow-xs no-print">
+    <div class="max-w-[98%] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Left Filters -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <!-- Company select -->
+        <div class="flex flex-col">
+          <label class="text-[11px] font-semibold text-slate-500 mb-0.5">บริษัทผู้รับเหมา:</label>
+          <select id="company-select" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium min-w-[240px]">
+            <!-- populated by JS -->
+          </select>
+        </div>
+
+        <!-- Year -->
+        <div class="flex flex-col">
+          <label class="text-[11px] font-semibold text-slate-500 mb-0.5">ปี พ.ศ. / ค.ศ.:</label>
+          <div class="text-xs bg-slate-100 border border-slate-250 rounded-lg px-2.5 py-1.5 font-bold text-slate-700">
+            2569 (2026)
+          </div>
+        </div>
+
+        <!-- Month select -->
+        <div class="flex flex-col">
+          <label class="text-[11px] font-semibold text-slate-500 mb-0.5">เดือน:</label>
+          <select id="month-select" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold text-blue-900">
+            <!-- populated by JS -->
+          </select>
+        </div>
+
+        <!-- Period Toggle -->
+        <div class="flex flex-col">
+          <label class="text-[11px] font-semibold text-slate-500 mb-0.5">งวดการทำงาน:</label>
+          <div class="inline-flex rounded-lg shadow-2xs border border-slate-300 p-0.5 bg-slate-100">
+            <button type="button" data-period="1" class="period-btn px-2.5 py-1 text-xs font-semibold rounded-md bg-blue-600 text-white transition">
+              1 - 15
+            </button>
+            <button type="button" data-period="2" class="period-btn px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-slate-700 hover:bg-slate-50 transition">
+              16 - สิ้นเดือน
+            </button>
+            <button type="button" data-period="all" class="period-btn px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-slate-700 hover:bg-slate-50 transition">
+              ทั้งเดือน
+            </button>
+          </div>
+        </div>
+
+        <!-- Department filter -->
+        <div class="flex flex-col">
+          <label class="text-[11px] font-semibold text-slate-500 mb-0.5">กะ/สังกัด:</label>
+          <select id="department-filter" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="all">ทั้งหมด ทุกสังกัด</option>
+            <option value="รักษาความปลอดภัย">รักษาความปลอดภัย (รปภ.)</option>
+            <option value="ธุรการ">ธุรการ (แม่บ้าน/คนขับรถ/โยธา)</option>
+            <option value="ผลิตไฟฟ้า">ผลิตไฟฟ้า (กองใบอ้อย)</option>
+            <option value="มิตรผล ไบโอเทค">มิตรผล ไบโอเทค (ผลิตปุ๋ย)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Right search & Quick Add -->
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <input type="text" id="search-employee" placeholder="ค้นหารหัส หรือ ชื่อพนักงาน..." 
+            class="text-xs pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg w-52 sm:w-64 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+
+        <button type="button" onclick="window.openAddEmployeeModal()" class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium shadow-xs transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          เพิ่มพนักงาน
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Summary KPI Cards -->
+  <section class="max-w-[98%] mx-auto w-full pt-4 px-2 no-print">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <!-- Card 1: Male count -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">ช</div>
+        <div>
+          <div class="text-[11px] font-medium text-slate-500">พนักงานชาย</div>
+          <div class="text-lg font-bold font-prompt text-slate-800"><span id="stat-active-men">0</span> <span class="text-xs font-normal text-slate-400">คน</span></div>
+        </div>
+      </div>
+
+      <!-- Card 2: Female count -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center font-bold text-sm">ญ</div>
+        <div>
+          <div class="text-[11px] font-medium text-slate-500">พนักงานหญิง</div>
+          <div class="text-lg font-bold font-prompt text-slate-800"><span id="stat-active-women">0</span> <span class="text-xs font-normal text-slate-400">คน</span></div>
+        </div>
+      </div>
+
+      <!-- Card 3: Total People -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        </div>
+        <div>
+          <div class="text-[11px] font-medium text-slate-500">เข้าทำงานรวม</div>
+          <div class="text-lg font-bold font-prompt text-slate-800"><span id="stat-active-total">0</span> <span class="text-xs font-normal text-slate-400">คน</span></div>
+        </div>
+      </div>
+
+      <!-- Card 4: Normal Hours -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <div>
+          <div class="text-[11px] font-medium text-slate-500">ชม. ปกติ (Normal)</div>
+          <div class="text-lg font-bold font-prompt text-emerald-700"><span id="stat-total-normal">0</span> <span class="text-xs font-normal text-slate-400">ชม.</span></div>
+        </div>
+      </div>
+
+      <!-- Card 5: OT Hours -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </div>
+        <div>
+          <div class="text-[11px] font-medium text-slate-500">ชม. OT (Overtime)</div>
+          <div class="text-lg font-bold font-prompt text-amber-700"><span id="stat-total-ot">0</span> <span class="text-xs font-normal text-slate-400">ชม.</span></div>
+        </div>
+      </div>
+
+      <!-- Card 6: Total Hours -->
+      <div class="bg-gradient-to-br from-blue-700 to-indigo-800 text-white p-3.5 rounded-xl shadow-xs flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-white/20 text-white flex items-center justify-center font-bold">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+        </div>
+        <div>
+          <div class="text-[11px] font-medium text-blue-100">รวม ชม.ทำงาน + OT</div>
+          <div class="text-lg font-bold font-prompt text-white"><span id="stat-total-hours">0</span> <span class="text-xs font-normal text-blue-200">ชม.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Navigation Tab Bar -->
+  <div class="max-w-[98%] mx-auto w-full pt-4 px-2 no-print">
+    <div class="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+      <button type="button" data-tab="matrix" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white shadow-xs transition flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+        1. ตารางบันทึกเวลาประจำงวด (Timesheet Matrix)
+      </button>
+
+      <button type="button" data-tab="single" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        2. ฟอร์มกรอกรายบุคคล / รายวัน (Single Entry)
+      </button>
+
+      <button type="button" data-tab="report" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        3. สรุปรายงาน จป. & ผู้บริหาร (Safety Report)
+      </button>
+
+      <button type="button" data-tab="employees" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        4. ทะเบียนพนักงาน & สถานะอบรม (Personnel)
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="max-w-[98%] mx-auto w-full flex-1 p-2 md:p-3">
+
+    <!-- ==================== TAB 1: MATRIX TIMESHEET ==================== -->
+    <div id="tab-panel-matrix" class="space-y-3">
+      <!-- Helper Tip -->
+      <div class="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 flex flex-wrap items-center justify-between text-xs text-blue-900 gap-2 no-print">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span><strong>คำแนะนำ:</strong> กรอกตัวเลขชั่วโมงการทำงานในตารางได้โดยตรง (เช่น <strong>8</strong> ชม. กะปกติ, <strong>12</strong> ชม. สำหรับกะ รปภ./กองใบอ้อย, หรือ <strong>0</strong> สำหรับวันหยุด/ขาด) ระบบจะแยกชั่วโมงปกติและ OT ให้อัตโนมัติ สามารถใช้ปุ่มลูกศร ↑ ↓ ← → หรือ Enter เพื่อเลื่อนช่องได้อย่างรวดเร็ว</span>
+        </div>
+        <div class="flex items-center gap-2 text-[11px]">
+          <span class="inline-flex items-center"><span class="w-3 h-3 bg-emerald-100 border border-emerald-300 rounded mr-1"></span> 8 ชม. (ปกติ)</span>
+          <span class="inline-flex items-center"><span class="w-3 h-3 bg-blue-100 border border-blue-300 rounded mr-1"></span> 12 ชม. (ปกติ 8 + OT 4)</span>
+          <span class="inline-flex items-center"><span class="w-3 h-3 bg-amber-100 border border-amber-300 rounded mr-1"></span> มี OT อื่นๆ</span>
+          <span class="inline-flex items-center"><span class="w-3 h-3 bg-amber-50 border border-amber-200 rounded mr-1"></span> วันหยุดสุดสัปดาห์</span>
+        </div>
+      </div>
+
+      <!-- Matrix Table Card -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden table-container">
+        <div class="overflow-x-auto max-h-[72vh]">
+          <table class="w-full text-left border-collapse border-slate-200 text-xs">
+            <thead class="sticky top-0 z-30 shadow-xs">
+              <tr class="bg-slate-100 text-slate-700 font-prompt border-b border-slate-250">
+                <th class="sticky-col-1 py-2 px-2 text-center text-slate-500 font-bold border-b border-r border-slate-200 bg-slate-100 w-12">ลำดับ</th>
+                <th class="sticky-col-2 py-2 px-2 font-bold border-b border-r border-slate-200 bg-slate-100 w-24">รหัสพนักงาน</th>
+                <th class="sticky-col-3 py-2 px-3 font-bold border-b border-r border-slate-200 bg-slate-100 min-w-[190px]">ชื่อ - นามสกุล</th>
+                
+                <!-- Dynamic date columns -->
+                <tr id="matrix-header-dates" class="contents"></tr>
+
+                <th class="py-2 px-2 text-right font-bold text-emerald-800 bg-emerald-50 border-b border-r border-slate-200 min-w-[70px]">ชม.ปกติ</th>
+                <th class="py-2 px-2 text-right font-bold text-amber-800 bg-amber-50 border-b border-r border-slate-200 min-w-[70px]">ชม. OT</th>
+                <th class="py-2 px-2 text-right font-bold text-blue-900 bg-blue-50 border-b border-r border-slate-200 min-w-[75px]">รวมทั้งสิ้น</th>
+                <th class="py-2 px-2 text-center font-bold text-slate-500 border-b border-slate-200 min-w-[80px] no-print">คำสั่งลัด</th>
+              </tr>
+            </thead>
+            <tbody id="matrix-body" class="divide-y divide-slate-100 font-mono">
+              <!-- populated by JS -->
+            </tbody>
+            <tfoot id="matrix-footer">
+              <!-- populated by JS -->
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: SINGLE ENTRY FORM ==================== -->
+    <div id="tab-panel-single" class="hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Left: Form Controls (7 cols) -->
+        <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-5">
+          <div class="border-b border-slate-150 pb-3 flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold font-prompt text-slate-800">ฟอร์มบันทึกชั่วโมงทำงานรายวัน</h2>
+              <p class="text-xs text-slate-500">กรอกข้อมูลเวลาทำงานของพนักงานรายบุคคล พร้อมคำนวณ Normal & OT ทันที</p>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 font-semibold border border-blue-200">บันทึกด่วน</span>
+          </div>
+
+          <!-- Employee Select -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">เลือกพนักงาน:</label>
+            <select id="single-emp-select" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 font-medium">
+              <!-- populated by JS -->
+            </select>
+          </div>
+
+          <!-- Employee Profile Card -->
+          <div id="single-emp-card" class="bg-slate-50 border border-slate-200/90 rounded-xl p-3.5">
+            <!-- populated by JS -->
+          </div>
+
+          <!-- Date & Quick Presets -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">วันที่ทำงาน:</label>
+              <input type="date" id="single-date" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 font-medium" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">ชั่วโมงทำงานรวม (Total Hours):</label>
+              <input type="number" id="single-hours" min="0" max="24" step="0.5" value="8" class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+
+          <!-- Preset Chips -->
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1.5">ปุ่มลัดเลือกกะทำงาน (Quick Presets):</label>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" onclick="window.setSingleHoursPreset(8)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition">
+                กะ 8 ชม. (ปกติ 8, OT 0)
+              </button>
+              <button type="button" onclick="window.setSingleHoursPreset(12)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-300 hover:bg-blue-100 transition">
+                กะ 12 ชม. (ปกติ 8, OT 4)
+              </button>
+              <button type="button" onclick="window.setSingleHoursPreset(10)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-300 hover:bg-amber-100 transition">
+                กะ 10 ชม. (ปกติ 8, OT 2)
+              </button>
+              <button type="button" onclick="window.setSingleHoursPreset(0)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 transition">
+                วันหยุด / OFF (0 ชม.)
+              </button>
+            </div>
+          </div>
+
+          <!-- Calculation Live Preview -->
+          <div class="grid grid-cols-3 gap-3 p-3.5 bg-gradient-to-r from-blue-50/50 via-slate-50 to-indigo-50/50 rounded-xl border border-blue-100">
+            <div class="text-center">
+              <div class="text-[11px] text-slate-500 font-medium">ชั่วโมงทำงานปกติ</div>
+              <div id="single-calc-normal" class="text-base font-bold font-prompt text-emerald-700">8 ชม.</div>
+            </div>
+            <div class="text-center border-x border-slate-200">
+              <div class="text-[11px] text-slate-500 font-medium">ชั่วโมงล่วงเวลา (OT)</div>
+              <div id="single-calc-ot" class="text-base font-bold font-prompt text-amber-700">0 ชม.</div>
+            </div>
+            <div class="text-center">
+              <div class="text-[11px] text-slate-500 font-medium">รวมทั้งสิ้น</div>
+              <div id="single-calc-total" class="text-base font-black font-prompt text-blue-800">8 ชม.</div>
+            </div>
+          </div>
+
+          <!-- Note -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">หมายเหตุเพิ่มเติม (ถ้ามี):</label>
+            <input type="text" id="single-note" placeholder="เช่น ทำงานกะดึก, เข้าเวรแทน, ซ่อมบำรุงพิเศษ" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500" />
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-3 pt-2">
+            <button type="button" onclick="window.saveSingleEntry(false)" class="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-prompt font-semibold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              บันทึกข้อมูล
+            </button>
+            <button type="button" onclick="window.saveSingleEntry(true)" class="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-prompt font-semibold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+              บันทึก และกรอกคนถัดไป
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Recent History (5 cols) -->
+        <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4 flex flex-col">
+          <div class="border-b border-slate-150 pb-3 flex items-center justify-between">
+            <h3 class="text-sm font-bold font-prompt text-slate-800">ประวัติการลงเวลาล่าสุดของพนักงานคนนี้</h3>
+            <span class="text-[11px] text-slate-400">10 รายการล่าสุด</span>
+          </div>
+
+          <div id="single-recent-list" class="flex-1 overflow-y-auto max-h-[460px]">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==================== TAB 3: REPORT VIEW ==================== -->
+    <div id="tab-panel-report" class="hidden space-y-5">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-5">
+        <div class="border-b border-slate-200 pb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold font-prompt text-slate-800">รายงานสรุปชั่วโมงการทำงาน และ ชั่วโมง OT ของ ผรม.ประจำ / ผรม.ซ่อมสร้าง (จป.)</h2>
+            <p class="text-xs text-slate-500">สรุปจำนวนผู้รับเหมาเข้าทำงาน และชั่วโมงการทำงาน + OT เปรียบเทียบรายเดือน ประจำปี 2569 (2026)</p>
+          </div>
+          <button type="button" onclick="window.print()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition no-print">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            พิมพ์รายงาน จป.
+          </button>
+        </div>
+
+        <!-- Monthly Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse border border-slate-200 text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-700 font-prompt border-b border-slate-300">
+                <th class="py-2.5 px-3 text-center w-12 border-r border-slate-200">ลำดับ</th>
+                <th class="py-2.5 px-3 border-r border-slate-200">เดือน</th>
+                <th class="py-2.5 px-3 text-right text-blue-800 border-r border-slate-200">จำนวนพนักงานชาย (คน)</th>
+                <th class="py-2.5 px-3 text-right text-pink-800 border-r border-slate-200">จำนวนพนักงานหญิง (คน)</th>
+                <th class="py-2.5 px-3 text-right font-bold text-slate-800 border-r border-slate-200">รวมพนักงาน (คน)</th>
+                <th class="py-2.5 px-3 text-right text-emerald-800 border-r border-slate-200">ชม. ปกติ</th>
+                <th class="py-2.5 px-3 text-right text-amber-800 border-r border-slate-200">ชม. OT</th>
+                <th class="py-2.5 px-3 text-right font-bold text-blue-900 bg-blue-50/70">รวม ชม.ทำงาน + OT</th>
+              </tr>
+            </thead>
+            <tbody id="report-monthly-body">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Weekly Tracking Table for selected month -->
+        <div class="mt-6 border-t border-slate-200 pt-5">
+          <h3 class="text-sm font-bold font-prompt text-slate-800 mb-3 flex items-center gap-2">
+            <span>สรุปชั่วโมงการทำงานรายสัปดาห์ (Weekly Tracking - สัปดาห์ที่ 1 - 53)</span>
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse border border-slate-200 text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                  <th class="py-2 px-3">สัปดาห์</th>
+                  <th class="py-2 px-3">ช่วงวันที่</th>
+                  <th class="py-2 px-3 text-right text-emerald-700">ชม. ปกติ</th>
+                  <th class="py-2 px-3 text-right text-amber-700">ชม. OT</th>
+                  <th class="py-2 px-3 text-right text-blue-800">รวม ชม. ทำงาน + OT</th>
+                </tr>
+              </thead>
+              <tbody id="report-weekly-body">
+                <!-- populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: EMPLOYEE LIST ==================== -->
+    <div id="tab-panel-employees" class="hidden space-y-4">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div class="border-b border-slate-150 pb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold font-prompt text-slate-800">ทะเบียนข้อมูลพนักงานและสถานะอบรมปฐมนิเทศความปลอดภัย</h2>
+            <p class="text-xs text-slate-500">ข้อมูลฝ่ายความปลอดภัย อาชีวอนามัยและสิ่งแวดล้อม (จป.) โรงงานน้ำตาลมิตรภูเวียง</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="employees-count-badge" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">0 คน</span>
+            <button type="button" onclick="window.openAddEmployeeModal()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium inline-flex items-center gap-1.5 shadow-xs transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              เพิ่มพนักงานใหม่
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto max-h-[68vh]">
+          <table class="w-full text-left border-collapse border border-slate-200 text-xs">
+            <thead class="sticky top-0 bg-slate-100 z-10 shadow-2xs font-prompt">
+              <tr class="border-b border-slate-300 text-slate-700">
+                <th class="py-2.5 px-3 text-center w-12">ลำดับ</th>
+                <th class="py-2.5 px-3 w-24">รหัส</th>
+                <th class="py-2.5 px-3">ชื่อ - นามสกุล</th>
+                <th class="py-2.5 px-3 w-16">เพศ</th>
+                <th class="py-2.5 px-3">ตำแหน่ง</th>
+                <th class="py-2.5 px-3">กะ/สังกัด</th>
+                <th class="py-2.5 px-3">วันเริ่มงาน</th>
+                <th class="py-2.5 px-3">สถานะฝึกอบรม</th>
+                <th class="py-2.5 px-3">วันที่อบรม จป.</th>
+                <th class="py-2.5 px-3 text-center w-28 no-print">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="employees-table-body">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Print Signature Footer (visible only in print mode) -->
+  <footer class="print-only max-w-[98%] mx-auto mt-8 pt-6 border-t border-slate-400">
+    <div class="grid grid-cols-3 gap-8 text-center text-xs">
+      <div>
+        <div class="h-14"></div>
+        <div class="border-t border-slate-400 pt-1 font-semibold">ลงชื่อ ....................................................</div>
+        <div class="text-slate-600 mt-1">ผู้จัดทำข้อมูล (ผู้รับเหมา)</div>
+        <div class="text-slate-500 text-[10px]">วันที่ ......./......./...........</div>
+      </div>
+      <div>
+        <div class="h-14"></div>
+        <div class="border-t border-slate-400 pt-1 font-semibold">ลงชื่อ ....................................................</div>
+        <div class="text-slate-600 mt-1">ผู้ตรวจสอบ (หัวหน้างาน)</div>
+        <div class="text-slate-500 text-[10px]">วันที่ ......./......./...........</div>
+      </div>
+      <div>
+        <div class="h-14"></div>
+        <div class="border-t border-slate-400 pt-1 font-semibold">ลงชื่อ ....................................................</div>
+        <div class="text-slate-600 mt-1">เจ้าหน้าที่ความปลอดภัย (จป.วิชาชีพ)</div>
+        <div class="text-slate-500 text-[10px]">วันที่ ......./......./...........</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal Add/Edit Employee -->
+  <div id="emp-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+      <div class="px-5 py-3.5 bg-gradient-to-r from-blue-800 to-indigo-900 text-white flex items-center justify-between">
+        <h3 id="modal-emp-title" class="font-bold font-prompt text-sm text-white">เพิ่มพนักงานใหม่</h3>
+        <button type="button" onclick="window.closeEmployeeModal()" class="text-blue-200 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <form onsubmit="window.saveEmployeeFromModal(event)" class="p-5 space-y-3.5 text-xs">
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">รหัสพนักงาน:</label>
+            <input type="text" id="emp-form-id" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono font-bold text-blue-700" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">คำนำหน้า:</label>
+            <select id="emp-form-title" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+              <option value="นาย">นาย</option>
+              <option value="นาง">นาง</option>
+              <option value="นางสาว">นางสาว</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">เพศ:</label>
+            <select id="emp-form-gender" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+              <option value="ชาย">ชาย</option>
+              <option value="หญิง">หญิง</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">ชื่อจริง:</label>
+            <input type="text" id="emp-form-firstname" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">นามสกุล:</label>
+            <input type="text" id="emp-form-lastname" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">ตำแหน่ง:</label>
+            <input type="text" id="emp-form-position" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">กะ/สังกัด:</label>
+            <select id="emp-form-department" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+              <option value="รักษาความปลอดภัย">รักษาความปลอดภัย</option>
+              <option value="ธุรการ">ธุรการ</option>
+              <option value="ผลิตไฟฟ้า">ผลิตไฟฟ้า</option>
+              <option value="มิตรผล ไบโอเทค">มิตรผล ไบโอเทค</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">วันเริ่มงาน:</label>
+            <input type="date" id="emp-form-startdate" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">สถานะอบรมความปลอดภัย:</label>
+            <select id="emp-form-training" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+              <option value="trained">ผ่านการอบรมปฐมนิเทศความปลอดภัยแล้ว</option>
+              <option value="train 3 hrs.">อบรม 3 ชม.</option>
+              <option value="Not">ยังไม่ได้รับการอบรม</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">วันที่ผ่านการอบรม จป.:</label>
+          <input type="date" id="emp-form-trainingdate" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2" />
+        </div>
+
+        <div class="pt-3 flex items-center justify-end gap-2 border-t border-slate-200">
+          <button type="button" onclick="window.closeEmployeeModal()" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition">
+            ยกเลิก
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs transition">
+            บันทึกพนักงาน
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast" class="hidden opacity-0"></div>
+
+  <!-- Scripts -->
+  <script src="contractor_data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
